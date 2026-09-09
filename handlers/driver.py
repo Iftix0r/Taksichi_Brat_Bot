@@ -1,3 +1,5 @@
+import logging
+
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
@@ -15,6 +17,8 @@ from keyboards import (
     remove_keyboard,
     skip_keyboard,
 )
+
+logger = logging.getLogger(__name__)
 
 DRIVER_PHONE, DRIVER_AD = range(2)
 
@@ -75,6 +79,10 @@ async def driver_ad_received(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_text: str | None):
     drivers_group_id = db.get_setting(DRIVERS_GROUP_KEY)
     if not drivers_group_id:
+        logger.warning(
+            "Drivers group is not configured (see /admin) — skipping ad post for driver %s",
+            user.id,
+        )
         return
 
     lines = [
@@ -85,16 +93,34 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
     ]
     if ad_text:
         lines += ["", ad_text]
+    caption = "\n".join(lines)
 
+    photo_file_id = None
     try:
-        await context.bot.send_message(
-            chat_id=int(drivers_group_id),
-            text="\n".join(lines),
-            reply_markup=contact_driver_keyboard(user.username, user.id),
-            parse_mode=ParseMode.HTML,
-        )
+        photos = await context.bot.get_user_profile_photos(user.id, limit=1)
+        if photos.total_count > 0:
+            photo_file_id = photos.photos[0][-1].file_id
     except TelegramError:
         pass
+
+    try:
+        if photo_file_id:
+            await context.bot.send_photo(
+                chat_id=int(drivers_group_id),
+                photo=photo_file_id,
+                caption=caption,
+                reply_markup=contact_driver_keyboard(user.username, user.id),
+                parse_mode=ParseMode.HTML,
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=int(drivers_group_id),
+                text=caption,
+                reply_markup=contact_driver_keyboard(user.username, user.id),
+                parse_mode=ParseMode.HTML,
+            )
+    except TelegramError as exc:
+        logger.warning("Failed to post driver ad to group %s: %s", drivers_group_id, exc)
 
 
 async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
