@@ -7,7 +7,7 @@ from telegram import (
 )
 from telegram.constants import KeyboardButtonStyle
 
-SKIP_LOCATION_TEXT = "➡️ O'tkazib yuborish"
+SKIP_TEXT = "➡️ O'tkazib yuborish"
 BACK_TEXT = "⬅️ Bosh menyu"
 
 
@@ -58,10 +58,16 @@ def location_keyboard() -> ReplyKeyboardMarkup:
                     style=KeyboardButtonStyle.PRIMARY,
                 )
             ],
-            [KeyboardButton(SKIP_LOCATION_TEXT)],
+            [KeyboardButton(SKIP_TEXT)],
         ],
         resize_keyboard=True,
         one_time_keyboard=True,
+    )
+
+
+def skip_keyboard() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton(SKIP_TEXT)]], resize_keyboard=True, one_time_keyboard=True
     )
 
 
@@ -100,4 +106,10 @@ def contact_passenger_keyboard(username: str | None, user_id: int) -> InlineKeyb
                 )
             ]
         ]
+    )
+
+
+def admin_menu_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔄 Yangilash", callback_data="admin_refresh")]]
     )

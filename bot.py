@@ -11,7 +11,15 @@ from telegram.ext import (
 
 import database as db
 from config import BOT_TOKEN
-from handlers.driver import DRIVER_PHONE, accept_order, driver_phone_received, role_driver
+from handlers.admin import admin_panel, admin_refresh, set_drivers_group, set_orders_group
+from handlers.driver import (
+    DRIVER_AD,
+    DRIVER_PHONE,
+    accept_order,
+    driver_ad_received,
+    driver_phone_received,
+    role_driver,
+)
 from handlers.passenger import (
     LOCATION,
     PHONE,
@@ -21,7 +29,7 @@ from handlers.passenger import (
     role_passenger,
 )
 from handlers.start import cancel, start
-from keyboards import SKIP_LOCATION_TEXT
+from keyboards import SKIP_TEXT
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -40,7 +48,7 @@ def main() -> None:
             PHONE: [MessageHandler(filters.CONTACT, phone_received)],
             LOCATION: [
                 MessageHandler(filters.LOCATION, location_received),
-                MessageHandler(filters.Regex(f"^{SKIP_LOCATION_TEXT}$"), location_skipped),
+                MessageHandler(filters.Regex(f"^{SKIP_TEXT}$"), location_skipped),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
@@ -50,11 +58,16 @@ def main() -> None:
         entry_points=[CallbackQueryHandler(role_driver, pattern="^role_driver$")],
         states={
             DRIVER_PHONE: [MessageHandler(filters.CONTACT, driver_phone_received)],
+            DRIVER_AD: [MessageHandler(filters.TEXT & ~filters.COMMAND, driver_ad_received)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("admin", admin_panel))
+    application.add_handler(CommandHandler("set_orders_group", set_orders_group))
+    application.add_handler(CommandHandler("set_drivers_group", set_drivers_group))
+    application.add_handler(CallbackQueryHandler(admin_refresh, pattern="^admin_refresh$"))
     application.add_handler(passenger_conv)
     application.add_handler(driver_conv)
     application.add_handler(CallbackQueryHandler(accept_order, pattern=r"^accept_\d+$"))

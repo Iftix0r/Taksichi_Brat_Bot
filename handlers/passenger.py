@@ -2,8 +2,9 @@ from telegram import Update
 from telegram.ext import ContextTypes, ConversationHandler, filters
 
 import database as db
+from handlers.admin import ORDERS_GROUP_KEY
 from keyboards import (
-    SKIP_LOCATION_TEXT,
+    SKIP_TEXT,
     contact_keyboard,
     location_keyboard,
     main_menu_inline,
@@ -74,7 +75,6 @@ async def location_skipped(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def _notify_drivers(context: ContextTypes.DEFAULT_TYPE, order_id: int, passenger) -> None:
-    drivers = db.get_active_drivers()
     order = db.get_order(order_id)
 
     text = (
@@ -83,17 +83,23 @@ async def _notify_drivers(context: ContextTypes.DEFAULT_TYPE, order_id: int, pas
         f"Telefon: {order['passenger_phone']}\n"
     )
 
-    for driver in drivers:
+    orders_group_id = db.get_setting(ORDERS_GROUP_KEY)
+    if orders_group_id:
+        target_chat_ids = [int(orders_group_id)]
+    else:
+        target_chat_ids = [driver["user_id"] for driver in db.get_active_drivers()]
+
+    for chat_id in target_chat_ids:
         try:
             if order["lat"] is not None and order["lon"] is not None:
                 await context.bot.send_location(
-                    chat_id=driver["user_id"], latitude=order["lat"], longitude=order["lon"]
+                    chat_id=chat_id, latitude=order["lat"], longitude=order["lon"]
                 )
             message = await context.bot.send_message(
-                chat_id=driver["user_id"],
+                chat_id=chat_id,
                 text=text,
                 reply_markup=order_accept_keyboard(order_id),
             )
-            db.save_notification(order_id, driver["user_id"], message.message_id)
+            db.save_notification(order_id, chat_id, message.message_id)
         except Exception:
             continue

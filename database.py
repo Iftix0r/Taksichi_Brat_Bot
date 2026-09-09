@@ -51,9 +51,17 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS order_notifications (
                 order_id INTEGER NOT NULL,
-                driver_id INTEGER NOT NULL,
+                chat_id INTEGER NOT NULL,
                 message_id INTEGER NOT NULL,
-                PRIMARY KEY (order_id, driver_id)
+                PRIMARY KEY (order_id, chat_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             )
             """
         )
@@ -130,11 +138,11 @@ def accept_order(order_id: int, driver_id: int) -> bool:
         return cur.rowcount == 1
 
 
-def save_notification(order_id: int, driver_id: int, message_id: int):
+def save_notification(order_id: int, chat_id: int, message_id: int):
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO order_notifications (order_id, driver_id, message_id) VALUES (?, ?, ?)",
-            (order_id, driver_id, message_id),
+            "INSERT INTO order_notifications (order_id, chat_id, message_id) VALUES (?, ?, ?)",
+            (order_id, chat_id, message_id),
         )
 
 
@@ -143,3 +151,20 @@ def get_notifications(order_id: int) -> list[sqlite3.Row]:
         return conn.execute(
             "SELECT * FROM order_notifications WHERE order_id = ?", (order_id,)
         ).fetchall()
+
+
+def get_setting(key: str) -> str | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+
+def set_setting(key: str, value: str):
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, value),
+        )
