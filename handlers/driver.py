@@ -130,8 +130,8 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
 
     keyboard = driver_ad_group_keyboard(context.bot.username, user.username, user.id)
 
-    try:
-        if photo_file_id:
+    if photo_file_id:
+        try:
             await context.bot.send_photo(
                 chat_id=int(drivers_group_id),
                 photo=photo_file_id,
@@ -139,13 +139,21 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
                 reply_markup=keyboard,
                 parse_mode=ParseMode.HTML,
             )
-        else:
-            await context.bot.send_message(
-                chat_id=int(drivers_group_id),
-                text=caption,
-                reply_markup=keyboard,
-                parse_mode=ParseMode.HTML,
+            return
+        except TelegramError as exc:
+            logger.warning(
+                "Failed to send driver ad photo to group %s, falling back to text: %s",
+                drivers_group_id,
+                exc,
             )
+
+    try:
+        await context.bot.send_message(
+            chat_id=int(drivers_group_id),
+            text=caption,
+            reply_markup=keyboard,
+            parse_mode=ParseMode.HTML,
+        )
     except TelegramError as exc:
         logger.warning("Failed to post driver ad to group %s: %s", drivers_group_id, exc)
 
