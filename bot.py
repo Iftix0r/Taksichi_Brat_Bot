@@ -1,13 +1,16 @@
 import logging
 
+from telegram.error import NetworkError, TimedOut
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
     CommandHandler,
+    ContextTypes,
     ConversationHandler,
     MessageHandler,
     filters,
 )
+from telegram.request import HTTPXRequest
 
 import database as db
 from config import BOT_TOKEN
@@ -47,10 +50,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if isinstance(context.error, (NetworkError, TimedOut)):
+        logger.warning("Network hiccup while handling update: %s", context.error)
+        return
+    logger.error("Unhandled exception while handling update %s", update, exc_info=context.error)
+
+
 def main() -> None:
     db.init_db()
 
-    application = Application.builder().token(BOT_TOKEN).build()
+    request = HTTPXRequest(
+        connect_timeout=20.0,
+        read_timeout=20.0,
+        write_timeout=20.0,
+        pool_timeout=20.0,
+    )
+    application = (
+        Application.builder().token(BOT_TOKEN).request(request).get_updates_request(request).build()
+    )
+    application.add_error_handler(error_handler)
 
     passenger_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(role_passenger, pattern="^role_passenger$")],
