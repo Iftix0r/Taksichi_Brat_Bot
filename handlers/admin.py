@@ -86,15 +86,22 @@ async def _link_group(update: Update, context: ContextTypes.DEFAULT_TYPE, settin
         )
         return WAITING_ORDERS_ID if setting_key == ORDERS_GROUP_KEY else WAITING_DRIVERS_ID
 
-    if chat.type not in ("group", "supergroup"):
+    if chat.type not in ("group", "supergroup", "channel"):
         await update.message.reply_text(
-            "Bu ID guruhga tegishli emas. Guruh ID sini yuboring yoki /cancel bilan bekor qiling."
+            "Bu ID guruh yoki kanalga tegishli emas. Qaytadan yuboring yoki /cancel bilan bekor qiling."
         )
         return WAITING_ORDERS_ID if setting_key == ORDERS_GROUP_KEY else WAITING_DRIVERS_ID
 
     db.set_setting(setting_key, str(chat_id))
+    kind = "kanal" if chat.type == "channel" else "guruh"
+    note = (
+        "\n\n⚠️ Bu kanal ekan — bot xabar yubora olishi uchun uni kanalga admin (Post Messages "
+        "huquqi bilan) qilib qo'shing."
+        if chat.type == "channel"
+        else ""
+    )
     await update.message.reply_text(
-        f"✅ \"{chat.title}\" guruhi endi {label} sifatida ulandi.",
+        f"✅ \"{chat.title}\" {kind} endi {label} sifatida ulandi.{note}",
         reply_markup=remove_keyboard(),
     )
     await update.message.reply_text(_admin_menu_text(), reply_markup=admin_menu_keyboard())
