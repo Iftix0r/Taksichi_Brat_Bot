@@ -111,5 +111,21 @@ def contact_passenger_keyboard(username: str | None, user_id: int) -> InlineKeyb
 
 def admin_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🔄 Yangilash", callback_data="admin_refresh")]]
+        [
+            [
+                InlineKeyboardButton(
+                    "📦 Buyurtmalar guruhini ID orqali ulash",
+                    callback_data="admin_ask_orders_id",
+                    style=KeyboardButtonStyle.PRIMARY,
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🚕 Haydovchilar guruhini ID orqali ulash",
+                    callback_data="admin_ask_drivers_id",
+                    style=KeyboardButtonStyle.SUCCESS,
+                )
+            ],
+            [InlineKeyboardButton("🔄 Yangilash", callback_data="admin_refresh")],
+        ]
     )

@@ -11,7 +11,17 @@ from telegram.ext import (
 
 import database as db
 from config import BOT_TOKEN
-from handlers.admin import admin_panel, admin_refresh, set_drivers_group, set_orders_group
+from handlers.admin import (
+    WAITING_DRIVERS_ID,
+    WAITING_ORDERS_ID,
+    admin_cancel,
+    admin_panel,
+    admin_refresh,
+    ask_drivers_id,
+    ask_orders_id,
+    receive_drivers_id,
+    receive_orders_id,
+)
 from handlers.driver import (
     DRIVER_AD,
     DRIVER_PHONE,
@@ -63,11 +73,22 @@ def main() -> None:
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
+    admin_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(ask_orders_id, pattern="^admin_ask_orders_id$"),
+            CallbackQueryHandler(ask_drivers_id, pattern="^admin_ask_drivers_id$"),
+        ],
+        states={
+            WAITING_ORDERS_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_orders_id)],
+            WAITING_DRIVERS_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_drivers_id)],
+        },
+        fallbacks=[CommandHandler("cancel", admin_cancel)],
+    )
+
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("admin", admin_panel))
-    application.add_handler(CommandHandler("set_orders_group", set_orders_group))
-    application.add_handler(CommandHandler("set_drivers_group", set_drivers_group))
     application.add_handler(CallbackQueryHandler(admin_refresh, pattern="^admin_refresh$"))
+    application.add_handler(admin_conv)
     application.add_handler(passenger_conv)
     application.add_handler(driver_conv)
     application.add_handler(CallbackQueryHandler(accept_order, pattern=r"^accept_\d+$"))
