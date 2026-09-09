@@ -168,3 +168,28 @@ def set_setting(key: str, value: str):
             """,
             (key, value),
         )
+
+
+def get_all_user_ids() -> list[int]:
+    with get_conn() as conn:
+        rows = conn.execute("SELECT user_id FROM users").fetchall()
+        return [row["user_id"] for row in rows]
+
+
+def get_stats() -> dict:
+    with get_conn() as conn:
+
+        def count(query: str) -> int:
+            return conn.execute(query).fetchone()["c"]
+
+        return {
+            "total_users": count("SELECT COUNT(*) c FROM users"),
+            "total_passengers": count("SELECT COUNT(*) c FROM users WHERE role = 'passenger'"),
+            "total_drivers": count("SELECT COUNT(*) c FROM users WHERE role = 'driver'"),
+            "active_drivers": count(
+                "SELECT COUNT(*) c FROM users WHERE role = 'driver' AND is_active_driver = 1"
+            ),
+            "total_orders": count("SELECT COUNT(*) c FROM orders"),
+            "pending_orders": count("SELECT COUNT(*) c FROM orders WHERE status = 'pending'"),
+            "accepted_orders": count("SELECT COUNT(*) c FROM orders WHERE status = 'accepted'"),
+        }

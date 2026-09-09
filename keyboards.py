@@ -58,7 +58,7 @@ def location_keyboard() -> ReplyKeyboardMarkup:
                     style=KeyboardButtonStyle.PRIMARY,
                 )
             ],
-            [KeyboardButton(SKIP_TEXT)],
+            [KeyboardButton(SKIP_TEXT, style=KeyboardButtonStyle.DANGER)],
         ],
         resize_keyboard=True,
         one_time_keyboard=True,
@@ -67,7 +67,9 @@ def location_keyboard() -> ReplyKeyboardMarkup:
 
 def skip_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
-        [[KeyboardButton(SKIP_TEXT)]], resize_keyboard=True, one_time_keyboard=True
+        [[KeyboardButton(SKIP_TEXT, style=KeyboardButtonStyle.DANGER)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
     )
 
 
@@ -149,6 +151,38 @@ def admin_menu_keyboard() -> InlineKeyboardMarkup:
                     style=KeyboardButtonStyle.SUCCESS,
                 )
             ],
-            [InlineKeyboardButton("🔄 Yangilash", callback_data="admin_refresh")],
+            [
+                InlineKeyboardButton(
+                    "📊 Statistika",
+                    callback_data="admin_stats",
+                    style=KeyboardButtonStyle.PRIMARY,
+                ),
+                InlineKeyboardButton(
+                    "📢 Xabar yuborish",
+                    callback_data="admin_ask_broadcast",
+                    style=KeyboardButtonStyle.SUCCESS,
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔄 Yangilash",
+                    callback_data="admin_refresh",
+                    style=KeyboardButtonStyle.PRIMARY,
+                )
+            ],
+        ]
+    )
+
+
+def admin_back_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "⬅️ Orqaga",
+                    callback_data="admin_refresh",
+                    style=KeyboardButtonStyle.PRIMARY,
+                )
+            ]
         ]
     )

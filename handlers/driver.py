@@ -29,6 +29,20 @@ def _register_driver(user) -> None:
     db.set_role(user.id, "driver")
 
 
+async def _proceed_after_role_selected(context: ContextTypes.DEFAULT_TYPE, user, reply) -> int:
+    existing = db.get_user(user.id)
+    if existing and existing["phone"]:
+        db.set_driver_active(user.id, True)
+        await reply(
+            "✍️ E'loningizni yozing (yo'nalish, narx, mashina turi va h.k.):",
+            reply_markup=skip_keyboard(),
+        )
+        return DRIVER_AD
+
+    await reply("Telefon raqamingizni yuboring:", reply_markup=contact_keyboard())
+    return DRIVER_PHONE
+
+
 async def role_driver(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -36,12 +50,11 @@ async def role_driver(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     _register_driver(user)
 
     await query.edit_message_text("🚕 HAYDOVCHI rejimi tanlandi.")
-    await context.bot.send_message(
-        chat_id=user.id,
-        text="Telefon raqamingizni yuboring:",
-        reply_markup=contact_keyboard(),
-    )
-    return DRIVER_PHONE
+
+    async def reply(text, reply_markup=None):
+        await context.bot.send_message(chat_id=user.id, text=text, reply_markup=reply_markup)
+
+    return await _proceed_after_role_selected(context, user, reply)
 
 
 async def role_driver_deeplink(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -49,11 +62,7 @@ async def role_driver_deeplink(update: Update, context: ContextTypes.DEFAULT_TYP
     _register_driver(user)
 
     await update.message.reply_text("🚕 HAYDOVCHI rejimi tanlandi.")
-    await update.message.reply_text(
-        "Telefon raqamingizni yuboring:",
-        reply_markup=contact_keyboard(),
-    )
-    return DRIVER_PHONE
+    return await _proceed_after_role_selected(context, user, update.message.reply_text)
 
 
 async def driver_phone_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

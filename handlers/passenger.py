@@ -22,6 +22,20 @@ def _register_passenger(user) -> None:
     db.set_role(user.id, "passenger")
 
 
+async def _proceed_after_role_selected(context: ContextTypes.DEFAULT_TYPE, user, reply) -> int:
+    existing = db.get_user(user.id)
+    if existing and existing["phone"]:
+        context.user_data["phone"] = existing["phone"]
+        await reply(
+            "Joylashuvingizni yuboring (ixtiyoriy):",
+            reply_markup=location_keyboard(),
+        )
+        return LOCATION
+
+    await reply("Telefon raqamingizni yuboring:", reply_markup=contact_keyboard())
+    return PHONE
+
+
 async def role_passenger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
@@ -29,12 +43,11 @@ async def role_passenger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     _register_passenger(user)
 
     await query.edit_message_text("🧍 YO'LOVCHI rejimi tanlandi.")
-    await context.bot.send_message(
-        chat_id=user.id,
-        text="Telefon raqamingizni yuboring:",
-        reply_markup=contact_keyboard(),
-    )
-    return PHONE
+
+    async def reply(text, reply_markup=None):
+        await context.bot.send_message(chat_id=user.id, text=text, reply_markup=reply_markup)
+
+    return await _proceed_after_role_selected(context, user, reply)
 
 
 async def role_passenger_deeplink(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -42,11 +55,7 @@ async def role_passenger_deeplink(update: Update, context: ContextTypes.DEFAULT_
     _register_passenger(user)
 
     await update.message.reply_text("🧍 YO'LOVCHI rejimi tanlandi.")
-    await update.message.reply_text(
-        "Telefon raqamingizni yuboring:",
-        reply_markup=contact_keyboard(),
-    )
-    return PHONE
+    return await _proceed_after_role_selected(context, user, update.message.reply_text)
 
 
 async def phone_received(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

@@ -1,15 +1,20 @@
+import asyncio
+import logging
+
 from telegram import Update
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 import database as db
 from config import ADMIN_IDS
-from keyboards import admin_menu_keyboard, remove_keyboard
+from keyboards import admin_back_keyboard, admin_menu_keyboard, remove_keyboard
+
+logger = logging.getLogger(__name__)
 
 ORDERS_GROUP_KEY = "orders_group_id"
 DRIVERS_GROUP_KEY = "drivers_group_id"
 
-WAITING_ORDERS_ID, WAITING_DRIVERS_ID = range(2)
+WAITING_ORDERS_ID, WAITING_DRIVERS_ID, WAITING_BROADCAST = range(3)
 
 
 def admin_menu_text() -> str:
@@ -118,4 +123,65 @@ async def receive_drivers_id(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Bekor qilindi.", reply_markup=remove_keyboard())
+    return ConversationHandler.END
+
+
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query.from_user.id not in ADMIN_IDS:
+        await query.answer("Sizda ruxsat yo'q.", show_alert=True)
+        return
+    await query.answer()
+
+    stats = db.get_stats()
+    text = (
+        "📊 Statistika\n\n"
+        f"👥 Jami foydalanuvchilar: {stats['total_users']}\n"
+        f"🧍 Yo'lovchilar: {stats['total_passengers']}\n"
+        f"🚕 Haydovchilar: {stats['total_drivers']} (faol: {stats['active_drivers']})\n\n"
+        f"📦 Jami buyurtmalar: {stats['total_orders']}\n"
+        f"⏳ Kutilmoqda: {stats['pending_orders']}\n"
+        f"✅ Qabul qilingan: {stats['accepted_orders']}"
+    )
+    await query.edit_message_text(text, reply_markup=admin_back_keyboard())
+
+
+async def ask_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    if query.from_user.id not in ADMIN_IDS:
+        await query.answer("Sizda ruxsat yo'q.", show_alert=True)
+        return ConversationHandler.END
+    await query.answer()
+    await query.edit_message_text(
+        "📢 Barcha foydalanuvchilarga yuboriladigan xabarni yuboring "
+        "(matn, rasm, video — istalgan turdagi xabar bo'lishi mumkin):\n\n"
+        "Bekor qilish uchun /cancel yuboring."
+    )
+    return WAITING_BROADCAST
+
+
+async def receive_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    admin_chat_id = update.effective_chat.id
+    message_id = update.message.message_id
+    admin_id = update.effective_user.id
+
+    user_ids = [uid for uid in db.get_all_user_ids() if uid != admin_id]
+
+    sent = 0
+    failed = 0
+    for uid in user_ids:
+        try:
+            await context.bot.copy_message(
+                chat_id=uid, from_chat_id=admin_chat_id, message_id=message_id
+            )
+            sent += 1
+        except TelegramError as exc:
+            failed += 1
+            logger.info("Broadcast failed for user %s: %s", uid, exc)
+        await asyncio.sleep(0.05)
+
+    await update.message.reply_text(
+        f"✅ Xabar yuborildi: {sent} ta foydalanuvchiga.\n❌ Yuborib bo'lmadi: {failed} ta."
+    )
+    await update.message.reply_text(admin_menu_text(), reply_markup=admin_menu_keyboard())
     return ConversationHandler.END

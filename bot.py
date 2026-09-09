@@ -15,15 +15,19 @@ from telegram.request import HTTPXRequest
 import database as db
 from config import BOT_TOKEN
 from handlers.admin import (
+    WAITING_BROADCAST,
     WAITING_DRIVERS_ID,
     WAITING_ORDERS_ID,
     admin_cancel,
     admin_panel,
     admin_refresh,
+    ask_broadcast,
     ask_drivers_id,
     ask_orders_id,
+    receive_broadcast,
     receive_drivers_id,
     receive_orders_id,
+    show_stats,
 )
 from handlers.driver import (
     DRIVER_AD,
@@ -112,10 +116,12 @@ def main() -> None:
         entry_points=[
             CallbackQueryHandler(ask_orders_id, pattern="^admin_ask_orders_id$"),
             CallbackQueryHandler(ask_drivers_id, pattern="^admin_ask_drivers_id$"),
+            CallbackQueryHandler(ask_broadcast, pattern="^admin_ask_broadcast$"),
         ],
         states={
             WAITING_ORDERS_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_orders_id)],
             WAITING_DRIVERS_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_drivers_id)],
+            WAITING_BROADCAST: [MessageHandler(filters.ALL & ~filters.COMMAND, receive_broadcast)],
         },
         fallbacks=[CommandHandler("cancel", admin_cancel)],
     )
@@ -125,6 +131,7 @@ def main() -> None:
     )
     application.add_handler(CommandHandler("admin", admin_panel))
     application.add_handler(CallbackQueryHandler(admin_refresh, pattern="^admin_refresh$"))
+    application.add_handler(CallbackQueryHandler(show_stats, pattern="^admin_stats$"))
     application.add_handler(admin_conv)
     application.add_handler(passenger_conv)
     application.add_handler(driver_conv)
