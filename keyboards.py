@@ -109,6 +109,29 @@ def contact_passenger_keyboard(username: str | None, user_id: int) -> InlineKeyb
     )
 
 
+def driver_ad_group_keyboard(
+    bot_username: str, username: str | None, user_id: int
+) -> InlineKeyboardMarkup:
+    contact_url = f"https://t.me/{username}" if username else f"tg://user?id={user_id}"
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("✉️ Xabar yozish", url=contact_url, style=KeyboardButtonStyle.PRIMARY)],
+            [
+                InlineKeyboardButton(
+                    "🚖 Taxi chaqirish",
+                    url=f"https://t.me/{bot_username}?start=passenger",
+                    style=KeyboardButtonStyle.PRIMARY,
+                ),
+                InlineKeyboardButton(
+                    "📝 E'lon berish",
+                    url=f"https://t.me/{bot_username}?start=driver",
+                    style=KeyboardButtonStyle.SUCCESS,
+                ),
+            ],
+        ]
+    )
+
+
 def admin_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [

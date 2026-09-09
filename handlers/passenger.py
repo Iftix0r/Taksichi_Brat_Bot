@@ -17,17 +17,33 @@ from keyboards import (
 PHONE, LOCATION = range(2)
 
 
+def _register_passenger(user) -> None:
+    db.upsert_user(user.id, user.username, user.full_name)
+    db.set_role(user.id, "passenger")
+
+
 async def role_passenger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     user = query.from_user
-    db.upsert_user(user.id, user.username, user.full_name)
-    db.set_role(user.id, "passenger")
+    _register_passenger(user)
 
     await query.edit_message_text("🧍 YO'LOVCHI rejimi tanlandi.")
     await context.bot.send_message(
         chat_id=user.id,
         text="Telefon raqamingizni yuboring:",
+        reply_markup=contact_keyboard(),
+    )
+    return PHONE
+
+
+async def role_passenger_deeplink(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    _register_passenger(user)
+
+    await update.message.reply_text("🧍 YO'LOVCHI rejimi tanlandi.")
+    await update.message.reply_text(
+        "Telefon raqamingizni yuboring:",
         reply_markup=contact_keyboard(),
     )
     return PHONE

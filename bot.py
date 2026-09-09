@@ -32,6 +32,7 @@ from handlers.driver import (
     driver_ad_received,
     driver_phone_received,
     role_driver,
+    role_driver_deeplink,
 )
 from handlers.passenger import (
     LOCATION,
@@ -40,6 +41,7 @@ from handlers.passenger import (
     location_skipped,
     phone_received,
     role_passenger,
+    role_passenger_deeplink,
 )
 from handlers.start import cancel, start
 from keyboards import SKIP_TEXT
@@ -72,7 +74,14 @@ def main() -> None:
     application.add_error_handler(error_handler)
 
     passenger_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(role_passenger, pattern="^role_passenger$")],
+        entry_points=[
+            CallbackQueryHandler(role_passenger, pattern="^role_passenger$"),
+            CommandHandler(
+                "start",
+                role_passenger_deeplink,
+                filters=filters.Regex(r"(?i)^/start(@\w+)?\s+passenger\b"),
+            ),
+        ],
         states={
             PHONE: [MessageHandler(filters.CONTACT, phone_received)],
             LOCATION: [
@@ -84,7 +93,14 @@ def main() -> None:
     )
 
     driver_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(role_driver, pattern="^role_driver$")],
+        entry_points=[
+            CallbackQueryHandler(role_driver, pattern="^role_driver$"),
+            CommandHandler(
+                "start",
+                role_driver_deeplink,
+                filters=filters.Regex(r"(?i)^/start(@\w+)?\s+driver\b"),
+            ),
+        ],
         states={
             DRIVER_PHONE: [MessageHandler(filters.CONTACT, driver_phone_received)],
             DRIVER_AD: [MessageHandler(filters.TEXT & ~filters.COMMAND, driver_ad_received)],
@@ -104,7 +120,9 @@ def main() -> None:
         fallbacks=[CommandHandler("cancel", admin_cancel)],
     )
 
-    application.add_handler(CommandHandler("start", start))
+    application.add_handler(
+        CommandHandler("start", start, filters=filters.Regex(r"(?i)^/start(@\w+)?\s*$"))
+    )
     application.add_handler(CommandHandler("admin", admin_panel))
     application.add_handler(CallbackQueryHandler(admin_refresh, pattern="^admin_refresh$"))
     application.add_handler(admin_conv)

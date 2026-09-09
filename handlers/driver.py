@@ -13,6 +13,7 @@ from keyboards import (
     contact_driver_keyboard,
     contact_keyboard,
     contact_passenger_keyboard,
+    driver_ad_group_keyboard,
     main_menu_inline,
     remove_keyboard,
     skip_keyboard,
@@ -23,17 +24,33 @@ logger = logging.getLogger(__name__)
 DRIVER_PHONE, DRIVER_AD = range(2)
 
 
+def _register_driver(user) -> None:
+    db.upsert_user(user.id, user.username, user.full_name)
+    db.set_role(user.id, "driver")
+
+
 async def role_driver(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     user = query.from_user
-    db.upsert_user(user.id, user.username, user.full_name)
-    db.set_role(user.id, "driver")
+    _register_driver(user)
 
     await query.edit_message_text("🚕 HAYDOVCHI rejimi tanlandi.")
     await context.bot.send_message(
         chat_id=user.id,
         text="Telefon raqamingizni yuboring:",
+        reply_markup=contact_keyboard(),
+    )
+    return DRIVER_PHONE
+
+
+async def role_driver_deeplink(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    _register_driver(user)
+
+    await update.message.reply_text("🚕 HAYDOVCHI rejimi tanlandi.")
+    await update.message.reply_text(
+        "Telefon raqamingizni yuboring:",
         reply_markup=contact_keyboard(),
     )
     return DRIVER_PHONE
@@ -86,13 +103,12 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
         return
 
     lines = [
-        "🚕 Yangi haydovchi!",
+        "🚕 Haydovchi e'loni",
         "",
         f"Ism: {mention_html(user.id, user.full_name)}",
+        f"E'lon: {ad_text or '—'}",
         f"Telefon: {driver['phone']}",
     ]
-    if ad_text:
-        lines += ["", ad_text]
     caption = "\n".join(lines)
 
     photo_file_id = None
@@ -103,20 +119,22 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
     except TelegramError:
         pass
 
+    keyboard = driver_ad_group_keyboard(context.bot.username, user.username, user.id)
+
     try:
         if photo_file_id:
             await context.bot.send_photo(
                 chat_id=int(drivers_group_id),
                 photo=photo_file_id,
                 caption=caption,
-                reply_markup=contact_driver_keyboard(user.username, user.id),
+                reply_markup=keyboard,
                 parse_mode=ParseMode.HTML,
             )
         else:
             await context.bot.send_message(
                 chat_id=int(drivers_group_id),
                 text=caption,
-                reply_markup=contact_driver_keyboard(user.username, user.id),
+                reply_markup=keyboard,
                 parse_mode=ParseMode.HTML,
             )
     except TelegramError as exc:
