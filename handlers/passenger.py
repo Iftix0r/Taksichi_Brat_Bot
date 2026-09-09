@@ -1,7 +1,9 @@
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes, ConversationHandler, filters
 
 import database as db
+from formatting import mention_html
 from handlers.admin import ORDERS_GROUP_KEY
 from keyboards import (
     SKIP_TEXT,
@@ -79,7 +81,7 @@ async def _notify_drivers(context: ContextTypes.DEFAULT_TYPE, order_id: int, pas
 
     text = (
         "🚕 Yangi buyurtma!\n\n"
-        f"Yo'lovchi: {passenger.full_name}\n"
+        f"Yo'lovchi: {mention_html(passenger.id, passenger.full_name)}\n"
         f"Telefon: {order['passenger_phone']}\n"
     )
 
@@ -99,6 +101,7 @@ async def _notify_drivers(context: ContextTypes.DEFAULT_TYPE, order_id: int, pas
                 chat_id=chat_id,
                 text=text,
                 reply_markup=order_accept_keyboard(order_id),
+                parse_mode=ParseMode.HTML,
             )
             db.save_notification(order_id, chat_id, message.message_id)
         except Exception:

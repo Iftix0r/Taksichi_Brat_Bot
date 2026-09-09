@@ -1,8 +1,10 @@
 from telegram import Update
+from telegram.constants import ParseMode
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes, ConversationHandler
 
 import database as db
+from formatting import mention_html
 from handlers.admin import DRIVERS_GROUP_KEY
 from keyboards import (
     SKIP_TEXT,
@@ -75,7 +77,12 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
     if not drivers_group_id:
         return
 
-    lines = ["🚕 Yangi haydovchi!", "", f"Ism: {user.full_name}", f"Telefon: {driver['phone']}"]
+    lines = [
+        "🚕 Yangi haydovchi!",
+        "",
+        f"Ism: {mention_html(user.id, user.full_name)}",
+        f"Telefon: {driver['phone']}",
+    ]
     if ad_text:
         lines += ["", ad_text]
 
@@ -84,6 +91,7 @@ async def _post_driver_ad(context: ContextTypes.DEFAULT_TYPE, user, driver, ad_t
             chat_id=int(drivers_group_id),
             text="\n".join(lines),
             reply_markup=contact_driver_keyboard(user.username, user.id),
+            parse_mode=ParseMode.HTML,
         )
     except TelegramError:
         pass
@@ -113,9 +121,11 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     try:
         await query.edit_message_text(
-            f"✅ Ushbu buyurtmani {driver.full_name} qabul qildi.\n\n"
-            f"Yo'lovchi: {passenger['full_name']}\nTelefon: {passenger['phone']}",
+            f"✅ Ushbu buyurtmani {mention_html(driver.id, driver.full_name)} qabul qildi.\n\n"
+            f"Yo'lovchi: {mention_html(passenger['user_id'], passenger['full_name'])}\n"
+            f"Telefon: {passenger['phone']}",
             reply_markup=contact_passenger_keyboard(passenger["username"], passenger["user_id"]),
+            parse_mode=ParseMode.HTML,
         )
     except TelegramError:
         pass
@@ -124,10 +134,11 @@ async def accept_order(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         chat_id=passenger["user_id"],
         text=(
             "✅ Sizning buyurtmangizni haydovchi qabul qildi!\n\n"
-            f"Haydovchi: {driver.full_name}\n"
+            f"Haydovchi: {mention_html(driver.id, driver.full_name)}\n"
             "Tez orada siz bilan bog'lanadi!"
         ),
         reply_markup=contact_driver_keyboard(driver.username, driver.id),
+        parse_mode=ParseMode.HTML,
     )
 
     for notif in db.get_notifications(order_id):
